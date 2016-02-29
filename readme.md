@@ -25,7 +25,3 @@ Find the campsite you wish to book on recreation.gov - do not enter selected dat
 `http://www.recreation.gov/camping/Wawona/r/campsiteDetails.do?contractCode=NRSO&siteId=204305&parkId=70924`
 
 The site ID and park ID are the numbers specified at the end of the URL.
-
-### Todo
-  * Make equipment_type selection more reliable
-  * ReserveAmerica.com compatibility
