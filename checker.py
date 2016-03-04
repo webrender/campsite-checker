@@ -2,6 +2,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
+from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 
 # The idea is that we will loop through each reservation page
 # based on the data below.  When we reach one which is available,
@@ -42,7 +43,13 @@ SITES = [							# Parks & sites to search through.
 
 url_request = 'http://www.recreation.gov/campsiteDetails.do?siteId={site_id}&contractCode=NRSO&parkId={park_id}&arvdate=' + ARV_DATE + '&lengthOfStay=' + LENGTH_OF_STAY
 
-driver = webdriver.Firefox()
+firefoxProfile = FirefoxProfile()
+firefoxProfile.set_preference('browser.migration.version', 9001)
+firefoxProfile.set_preference('permissions.default.image', 2)
+firefoxProfile.set_preference('dom.ipc.plugins.enabled.libflashplayer.so',
+                                  'false')
+driver = webdriver.Firefox(firefoxProfile)
+
 # Check if sites are available yet - if not refresh
 
 # Find an available site
@@ -86,38 +93,63 @@ def checksites():
 
 selected_site = checksites()
 
+# Error checker
+def checkerrors():
+	site_ready = False
+	num_retries = 0
+	while site_ready == False:
+		error = driver.find_element_by_css_selector('#msg1')
+		if error:
+			if num_retries < RETRIES:
+				print('Site error: ' + error.text)
+				num_retries += 1
+				driver.refresh()
+			else:
+				print('Site error. Exceeded number of retries.')
+				return False
+		else:
+			site_ready = True
+	return True
+
 # if we've got a selected_site, automate the booking process
 
 if selected_site:
 	# Click book button
 	driver.find_element_by_id('btnbookdates').click()
 
-	# Enter username
-	username_field = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#emailGroup input')))
-	username_field.send_keys(USERNAME);
+	# Check to see if we got an error, if so refresh
+	WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#contentArea')))
+	noerrors = checkerrors();
 
-	# Enter password
-	password_field = driver.find_element_by_css_selector('#passwrdGroup input')
-	password_field.send_keys(PASSWORD);
+	if (noerrors):
+		# Enter username
+		username_field = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#emailGroup input')))
+		username_field.send_keys(USERNAME);
 
-	# Click login button
-	driver.find_element_by_id('submitForm_submitForm').click()
+		# Enter password
+		password_field = driver.find_element_by_css_selector('#passwrdGroup input')
+		password_field.send_keys(PASSWORD);
 
-	# Check if Primary Equipment field is readonly, if not set a value
-	if driver.find_element_by_id('equip').is_enabled():
-		driver.find_element_by_css_selector("select#equip > option[value='" + EQUIPMENT_TYPE + "']").click()
+		# Click login button
+		driver.find_element_by_id('submitForm_submitForm').click()
 
-	# Set number of occupants
-	driver.find_element_by_id('numoccupants').send_keys(NUM_OCCUPANTS)
+		# Check if Primary Equipment field is readonly, if not set a value
+		if driver.find_element_by_id('equip').is_enabled():
+			driver.find_element_by_css_selector("select#equip > option[value='" + EQUIPMENT_TYPE + "']").click()
 
-	# Set number of vehicles
-	driver.find_element_by_id('numvehicles').send_keys(NUM_VEHICLES)
+		# Set number of occupants
+		driver.find_element_by_id('numoccupants').send_keys(NUM_OCCUPANTS)
 
-	# Click "Yes, I have read and understood this important information"
-	driver.find_element_by_id('agreement').click()
+		# Set number of vehicles
+		driver.find_element_by_id('numvehicles').send_keys(NUM_VEHICLES)
 
-	# Click "Continue to Shopping Cart" button
-	driver.find_element_by_id('continueshop').click()
+		# Click "Yes, I have read and understood this important information"
+		driver.find_element_by_id('agreement').click()
+
+		# Click "Continue to Shopping Cart" button
+		driver.find_element_by_id('continueshop').click()
+	else:
+		print('No available sites.')
 else:
 	print('No available sites.')
 
