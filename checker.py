@@ -1,3 +1,4 @@
+import os
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -11,12 +12,12 @@ from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 # can enter payment details.
 
 RETRIES = 1							# Number of initial retries
-ARV_DATE = '01/01/2016'				# Arrival Date in MM/DD/YYYY format
+ARV_DATE = '07/06/2017'				# Arrival Date in MM/DD/YYYY format
 LENGTH_OF_STAY = '1'				# Number of nights
-USERNAME = ''						# Recreation.gov username
-PASSWORD = ''						# Recreation.gov password
-NUM_OCCUPANTS = '1'					# Number of campers
-NUM_VEHICLES = '1'					# Number of vehicles
+USERNAME = str(os.environ['RECGOV_USERNAME'])						# Recreation.gov username
+PASSWORD = str(os.environ['RECGOV_PASSWORD'])						# Recreation.gov password
+NUM_OCCUPANTS = '6'					# Number of campers
+NUM_VEHICLES = '2'					# Number of vehicles
 EQUIPMENT_TYPE = '108060'			# EQUIPMENT TYPES:
 										# 0: None
 										# 108068: Caravan/Camper Van
@@ -25,6 +26,7 @@ EQUIPMENT_TYPE = '108060'			# EQUIPMENT TYPES:
 										# 108061: Pop up
 										# 108063: RV/Motorhome
 										# 108060: Tent
+										# 108661: Large Tent Over 9x12`
 										# 108062: Trailer
 SITES = [							# Parks & sites to search through.
 	{								# See README.md for details on how
@@ -86,7 +88,7 @@ def checksites():
 		# the selection is not available. if we find a site, return the value
 		try:
 			border_color = driver.find_element_by_id('arrivaldate').value_of_css_property('border-top-color')
-			if border_color == 'rgba(218, 218, 218, 1)':
+			if border_color != 'rgb(255, 72, 0)':
 				return site
 		except Exception as e:
 			print(e)
@@ -98,8 +100,12 @@ def checkerrors():
 	site_ready = False
 	num_retries = 0
 	while site_ready == False:
-		error = driver.find_element_by_css_selector('#msg1')
-		if error:
+		error = None
+		try:
+			error = driver.find_element_by_css_selector('#msg1')
+		except:
+			pass
+		if error != None:
 			if num_retries < RETRIES:
 				print('Site error: ' + error.text)
 				num_retries += 1
@@ -131,9 +137,10 @@ if selected_site:
 		password_field.send_keys(PASSWORD);
 
 		# Click login button
-		driver.find_element_by_id('submitForm_submitForm').click()
+		driver.find_element_by_name('submitForm').click()
 
 		# Check if Primary Equipment field is readonly, if not set a value
+		WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "equip")))
 		if driver.find_element_by_id('equip').is_enabled():
 			driver.find_element_by_css_selector("select#equip > option[value='" + EQUIPMENT_TYPE + "']").click()
 
@@ -149,7 +156,7 @@ if selected_site:
 		# Click "Continue to Shopping Cart" button
 		driver.find_element_by_id('continueshop').click()
 	else:
-		print('No available sites.')
+		print('No available sites. (L2)')
 else:
-	print('No available sites.')
+	print('No available sites. (L1)')
 

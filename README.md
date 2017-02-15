@@ -3,20 +3,30 @@
 This is a python script which attempts to automate the process of reserving sites on recreation.gov.  It is especially made for sought-after campsites which have limited booking windows.
 
 ### Dependencies
-  * OS X or *nix variant
-  * Python
-  * Selenium
-  * Firefox
+* OS X or *nix variant
+* Python
+* Selenium (current release)
+* geckodriver (current release)
+* Firefox (current release)
 
-If you're unfamiliar with the above tools, and using OS X: You already have a version of Python preinstalled. You can install Selenium by opening a Terminal window and entering the following command: `sudo easy_install selenium`
+* If you're unfamiliar with the above tools, and using OS X: You already have a version of Python preinstalled.
+* You can install Selenium by opening a Terminal window and entering the following command: `sudo easy_install selenium` or `pip install selenium`
+* On OS X you can install the geckodriver using [homebrew](http://homebrew.sh), like so: `brew install geckodriver`
+
 
 ### Running the script
 
 Open up checker.py and fill in the fields on lines 12-19. See below for how to find site\_id and park\_id values from the recreation.gov website.
 
-Once you've configured the script, open up a Terminal window and enter the command `python checker.py` to run the script.
+Set the following 2 environment variables:
+* RECGOV_USERNAME
+* RECGOV_PASSWORD
+
+Once you've configured the script, open up a Terminal window in the directory containing this script and enter the command `python ./checker.py` to run the script.
 
 Reccomended use pattern is to begin the script shortly before reservations are due to open, with a low number of retries. Recreation.gov network usage is monitored and you risk account termination if you just leave this running all day.
+
+*Note*: If you find, after playing with this script, that you have lots of Firefox windows open, you can kill them all on a Unix based platform with a command like `$ killall firefox-bin`.
 
 ### Finding park\_id and site\_id
 
