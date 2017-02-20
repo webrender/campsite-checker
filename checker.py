@@ -1,9 +1,17 @@
+#!/usr/bin/env python
+
 import os
+import ast
+import ConfigParser
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.wait import WebDriverWait
 from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
+
+config = ConfigParser.ConfigParser()
+
+config.read('checker.ini')
 
 # The idea is that we will loop through each reservation page
 # based on the data below.  When we reach one which is available,
@@ -11,51 +19,15 @@ from selenium.webdriver.firefox.firefox_profile import FirefoxProfile
 # at this point the reservation is held for 15 minutes and the user
 # can enter payment details.
 
-RETRIES = 1							# Number of initial retries
-ARV_DATE = '07/06/2017'				# Arrival Date in MM/DD/YYYY format
-LENGTH_OF_STAY = '1'				# Number of nights
-USERNAME = str(os.environ['RECGOV_USERNAME'])						# Recreation.gov username
-PASSWORD = str(os.environ['RECGOV_PASSWORD'])						# Recreation.gov password
-NUM_OCCUPANTS = '6'					# Number of campers
-NUM_VEHICLES = '2'					# Number of vehicles
-EQUIPMENT_TYPE = '108060'			# EQUIPMENT TYPES:
-										# 0: None
-										# 108068: Caravan/Camper Van
-										# 108067: Fifth Wheel
-										# 108660: Pickup Camper
-										# 108061: Pop up
-										# 108063: RV/Motorhome
-										# 108060: Tent
-										# 108661: Large Tent Over 9x12`
-										# 108062: Trailer
-SITES = [							# Parks & sites to search through.
-	{								# See README.md for details on how
-		'park_id': '70924',			# to find site IDs.
-		'site_id': '204308'
-	},
-	{
-		'park_id': '70924',
-		'site_id': '204309'
-	},
-	{
-		'park_id': '70924',
-		'site_id': '205951'
-	}
-]
-
-url_request = 'http://www.recreation.gov/campsiteDetails.do?siteId={site_id}&contractCode=NRSO&parkId={park_id}&arvdate=' + ARV_DATE + '&lengthOfStay=' + LENGTH_OF_STAY
+RETRIES = int(config.get("common", "retries"))
+USERNAME = config.get("common", "username")
+PASSWORD = config.get("common", "password")
+NUM_RESERVATIONS = int(config.get("common", "num_reservations"))
 
 firefoxProfile = FirefoxProfile()
 firefoxProfile.set_preference('browser.migration.version', 9001)
 firefoxProfile.set_preference('permissions.default.image', 2)
-firefoxProfile.set_preference('dom.ipc.plugins.enabled.libflashplayer.so',
-                                  'false')
-driver = webdriver.Firefox(firefoxProfile)
-
-# Check if sites are available yet - if not refresh
-
-# Find an available site
-selected_site = False
+firefoxProfile.set_preference('dom.ipc.plugins.enabled.libflashplayer.so', 'false')
 
 def checksites():
 	site_ready = False
@@ -93,8 +65,6 @@ def checksites():
 		except Exception as e:
 			print(e)
 
-selected_site = checksites()
-
 # Error checker
 def checkerrors():
 	site_ready = False
@@ -117,46 +87,73 @@ def checkerrors():
 			site_ready = True
 	return True
 
-# if we've got a selected_site, automate the booking process
+for i in range(NUM_RESERVATIONS):
 
-if selected_site:
-	# Click book button
-	driver.find_element_by_id('btnbookdates').click()
+	count = str(i + 1)
 
-	# Check to see if we got an error, if so refresh
-	WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#contentArea')))
-	noerrors = checkerrors();
+	driver = webdriver.Firefox(firefoxProfile)
+	driver.maximize_window()
 
-	if (noerrors):
-		# Enter username
-		username_field = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#emailGroup input')))
-		username_field.send_keys(USERNAME);
+	ARV_DATE = config.get("reservation_" + count, "arv_date")
+	LENGTH_OF_STAY = config.get("reservation_" + count, "length_of_stay")
+	NUM_OCCUPANTS = config.get("reservation_" + count, "num_occupants")
+	NUM_VEHICLES = config.get("reservation_" + count, "num_vehicles")
+	EQUIPMENT_TYPE = config.get("reservation_" + count, "equipment_type")
+	SITES = ast.literal_eval(config.get("reservation_" + count, "sites"))
 
-		# Enter password
-		password_field = driver.find_element_by_css_selector('#passwrdGroup input')
-		password_field.send_keys(PASSWORD);
+	print SITES
 
-		# Click login button
-		driver.find_element_by_name('submitForm').click()
+	url_request = 'http://www.recreation.gov/campsiteDetails.do?siteId={site_id}&contractCode=NRSO&parkId={park_id}&arvdate=' + ARV_DATE + '&lengthOfStay=' + LENGTH_OF_STAY
 
-		# Check if Primary Equipment field is readonly, if not set a value
-		WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "equip")))
-		if driver.find_element_by_id('equip').is_enabled():
-			driver.find_element_by_css_selector("select#equip > option[value='" + EQUIPMENT_TYPE + "']").click()
+	# Check if sites are available yet - if not refresh
 
-		# Set number of occupants
-		driver.find_element_by_id('numoccupants').send_keys(NUM_OCCUPANTS)
+	# Find an available site
+	selected_site = False
+	
+	selected_site = checksites()
+	# if we've got a selected_site, automate the booking process
 
-		# Set number of vehicles
-		driver.find_element_by_id('numvehicles').send_keys(NUM_VEHICLES)
+	if selected_site:
+		# Click book button
+		driver.find_element_by_id('btnbookdates').click()
 
-		# Click "Yes, I have read and understood this important information"
-		driver.find_element_by_id('agreement').click()
+		# Check to see if we got an error, if so refresh
+		WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#contentArea')))
+		noerrors = checkerrors();
 
-		# Click "Continue to Shopping Cart" button
-		driver.find_element_by_id('continueshop').click()
+		if (noerrors):
+			# Enter username
+			username_field = WebDriverWait(driver, 5).until(EC.presence_of_element_located((By.CSS_SELECTOR, '#emailGroup input')))
+			username_field.send_keys(USERNAME);
+
+			# Enter password
+			password_field = driver.find_element_by_css_selector('#passwrdGroup input')
+			password_field.send_keys(PASSWORD);
+
+			# Click login button
+			driver.find_element_by_name('submitForm').click()
+
+			# Check if Primary Equipment field is readonly, if not set a value
+			WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, "equip")))
+			if driver.find_element_by_id('equip').is_enabled():
+				driver.find_element_by_css_selector("select#equip > option[value='" + EQUIPMENT_TYPE + "']").click()
+
+			# Set number of occupants
+			driver.find_element_by_id('numoccupants').send_keys(NUM_OCCUPANTS)
+
+			# Set number of vehicles
+			driver.find_element_by_id('numvehicles').send_keys(NUM_VEHICLES)
+
+			# Click "Yes, I have read and understood this important information"
+			driver.find_element_by_id('agreement').click()
+
+			# Click "Continue to Shopping Cart" button
+			driver.find_element_by_id('continueshop').click()
+
+			print "You have 15 minutes to complete this reservation in the browser window."
+			
+		else:
+			print('No available sites. (L2)')
 	else:
-		print('No available sites. (L2)')
-else:
-	print('No available sites. (L1)')
+		print('No available sites. (L1)')
 
