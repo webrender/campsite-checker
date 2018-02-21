@@ -11,7 +11,7 @@ This is a python script which attempts to automate the process of reserving site
 
 * If you're unfamiliar with the above tools, and using OS X: You already have a version of Python preinstalled.
 * You can install Selenium by opening a Terminal window and entering the following command: `sudo easy_install selenium` or `pip install selenium`
-* On OS X you can install the geckodriver using [homebrew](http://homebrew.sh), like so: `brew install geckodriver`
+* On OS X you can install the geckodriver using [homebrew](http://brew.sh), like so: `brew install geckodriver`
 
 ### Running the script
 
